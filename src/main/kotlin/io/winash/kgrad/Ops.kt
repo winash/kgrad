@@ -1,6 +1,7 @@
 package io.winash.kgrad
 
 import org.nd4j.linalg.api.ndarray.INDArray
+import org.nd4j.linalg.api.ops.impl.loss.SparseSoftmaxCrossEntropyLossWithLogits
 import org.nd4j.linalg.factory.Nd4j
 import org.nd4j.linalg.ops.transforms.Transforms
 
@@ -148,10 +149,11 @@ object Functions {
     class LogSoftmax(vararg parents: Tensor) : Function(*parents) {
         override fun forward(): INDArray {
             val input = parents[0].data
+            val maxInput = input.max(1).reshape(-1, 1)
             val logsumexp = if (input.isMatrix) {
-                Transforms.log(Transforms.exp(input).sum(1)).reshape(-1, 1)
+                Transforms.log(Transforms.exp(input.sub(maxInput)).sum(1)).reshape(-1, 1)
             } else {
-                Transforms.log(Transforms.exp(input).sum(0))
+                Transforms.log(Transforms.exp(input.sub(maxInput)).sum(0))
             }
             val output = input.sub(logsumexp)
             saveForBackward(output)
@@ -236,6 +238,35 @@ object Functions {
             return listOf(gradOutput.div(y), gradOutput.div(x))
         }
     }
+
+    class Neg(vararg parents: Tensor) : Function(*parents) {
+        override fun forward(): INDArray {
+            val input = parents[0].data
+            return input.neg()
+        }
+
+        override fun backward(gradOutput: INDArray): List<INDArray> {
+            return listOf(gradOutput.neg())
+        }
+    }
+
+
+    fun sparseCategoricalCrossEntropy(logits: Tensor, target: Tensor, ignoreIndex: Int = -1): Tensor {
+        val lossMask = target.data.neq(ignoreIndex).castTo(Nd4j.dataType())
+        val yFlat = target.data.ravel().reshape(-1, 1)
+
+        val yOneHot = yFlat.eq(Nd4j.arange(logits.data.size(logits.data.rank() - 1).toDouble())
+            .reshape(1, logits.data.size(logits.data.rank() - 1)))
+            .castTo(Nd4j.dataType()).mul(lossMask.reshape(-1, 1))
+            .reshape(*target.shape(), logits.data.size(logits.data.rank() - 1))
+
+
+        val losses = logits.neg().mul(Tensor(yOneHot))
+        val sum = losses.data.sum(-1)
+        losses.data = sum
+        return losses.sum().div(Tensor(lossMask.sum()))
+    }
+
 
 }
 

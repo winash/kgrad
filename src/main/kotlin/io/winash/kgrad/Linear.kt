@@ -7,10 +7,14 @@ class Linear(private val weight: Tensor, private val bias: Tensor? = null) : Mod
         return if (bias != null) output.add(bias) else output
     }
 
+    override fun name(): String {
+        return "Linear"
+    }
+
 }
 
 
-class LazyLinear(private val outFeatures: Int, private val bias: Boolean = true) : Module() {
+class LazyLinear(private val outFeatures: Int, private val bias: Boolean = false) : Module() {
     private var weight: Tensor? = null
         get() = field
     private var biasTensor: Tensor? = null
@@ -19,12 +23,23 @@ class LazyLinear(private val outFeatures: Int, private val bias: Boolean = true)
     override fun forward(input: Tensor): Tensor {
         if (weight == null) {
             inferredInFeatures = input.data.shape().last().toInt()
-            weight = Tensor.randn(inferredInFeatures.toLong(), outFeatures.toLong())
+            weight = Tensor.xavierUniform(inferredInFeatures.toLong(), outFeatures.toLong())
             if (bias) {
                 biasTensor = Tensor.randn(outFeatures.toLong())
             }
         }
-        val output = input.data.mmul(weight!!.data)
-        return if (biasTensor != null) Tensor(output.add(biasTensor!!.data)) else Tensor(output)
+        val output = input.mmul(weight!!)
+        if (biasTensor != null)
+            output.add(biasTensor!!)
+        return output
     }
+
+    override fun name(): String {
+        return "LazyLinear"
+    }
+
+    override fun getWeights(): List<Tensor?> {
+        return listOf(weight)
+    }
+
 }

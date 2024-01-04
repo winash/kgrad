@@ -2,6 +2,7 @@ package io.winash.kgrad
 
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.factory.Nd4j
+import kotlin.math.sqrt
 
 /**
  * A tensor is a wrapper around an INDArray
@@ -11,7 +12,7 @@ import org.nd4j.linalg.factory.Nd4j
  * Learning materials:
  * https://d2l.ai/chapter_preliminaries/linear-algebra.html
  */
-class Tensor(val data: INDArray) {
+class Tensor(var data: INDArray) {
     var grad: INDArray? = null
     var ctx: Function? = null
 
@@ -62,6 +63,8 @@ class Tensor(val data: INDArray) {
         @JvmStatic
         fun rand(vararg shape: Long) = Tensor(Nd4j.rand(*shape))
 
+        @JvmStatic
+        fun xavierUniform(vararg shape: Long) = Tensor(Nd4j.rand(*shape).sub(0.5).mul(2.0).mul(sqrt(6.0 / (shape[0] + shape[1]))))
     }
 }
 
@@ -79,7 +82,8 @@ fun Tensor.norm() = Function.apply({ p -> Functions.Norm(*p) }, this)
 fun Tensor.abs() = Function.apply({ p -> Functions.Abs(*p) }, this)
 fun Tensor.div(other: Tensor) = Function.apply({ Functions.Div(this, other) }, this, other)
 fun Tensor.mmul(other: Tensor) = Function.apply({ Functions.MMul(this, other) }, this, other)
-
+fun Tensor.neg() = Function.apply({ p -> Functions.Neg(*p) }, this)
+fun Tensor.sigmoid() = Function.apply({ p -> Functions.Sigmoid(*p) }, this)
 
 fun Tensor.reshape(vararg shape: Long) = Tensor(data.reshape(*shape))
 fun Tensor.transpose() = Tensor(data.transpose())

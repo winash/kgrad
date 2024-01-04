@@ -21,6 +21,10 @@ class ModuleTest {
             override fun forward(input: Tensor): Tensor {
                 return out.forward(hidden.forward(input).relu())
             }
+
+            override fun name(): String {
+                return "MLP"
+            }
         }
 
         val model = MLP()
@@ -32,7 +36,7 @@ class ModuleTest {
     @Test
     fun testFixHiddenMLP() {
         class MLP : Module() {
-            private val weight = Tensor.rand(20, 20)
+            val weight = Tensor.rand(20, 20)
             private val linear = LazyLinear(20)
 
             override fun forward(input: Tensor): Tensor {
@@ -46,6 +50,10 @@ class ModuleTest {
                 }
                 return fw.sum()
             }
+
+            override fun name(): String {
+                return "MLP"
+            }
         }
 
         val model = MLP()
@@ -56,14 +64,11 @@ class ModuleTest {
 
 
     @Test
-    fun parameterTest(){
+    fun parameterTest() {
         val sequential = Sequential(LazyLinear(8), ReLU(), LazyLinear(1))
         val tensor = sequential.forward(Tensor.rand(2, 4))
         println(tensor.data.shape().asList())
     }
-
-
-
 
 
 }
